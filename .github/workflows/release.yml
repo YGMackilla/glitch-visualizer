@@ -1,29 +1,37 @@
-# Builds the apps and attaches them to a GitHub Release:
+# Builds the apps and publishes them as a GitHub Release:
 #   Windows: Glitch-Visualizer-Setup.exe (installer) + Glitch-Visualizer.exe (portable, no install)
 #   Mac:     Glitch-Visualizer-Mac.zip (Apple Silicon + Intel)
-# Runs when a version tag is pushed (e.g. v1.0.1) or a release is published, or by hand from the Actions tab.
+# Run it: Actions tab -> "Build apps" -> Run workflow (type the version, e.g. v1.0.1), or push a tag like v1.0.1.
 name: Build apps
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to publish (e.g. v1.0.1)'
+        required: true
+        default: 'v1.0.0'
   push:
     tags: ['v*']
-  release:
-    types: [published]
-  workflow_dispatch:
 permissions:
   contents: write
 jobs:
   release:
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.t.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
+      - id: t
+        run: echo "tag=${{ github.event.inputs.version || github.ref_name }}" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
         with:
-          name: Glitch Visualizer ${{ github.ref_name }}
+          tag_name: ${{ steps.t.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Glitch Visualizer ${{ steps.t.outputs.tag }}
           body_path: .github/RELEASE_NOTES.md
+          make_latest: true
   windows:
     needs: release
-    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,21 +42,14 @@ jobs:
       - run: npm run dist
         working-directory: app
         env: { CSC_IDENTITY_AUTO_DISCOVERY: false }
-      - uses: actions/upload-artifact@v4
+      - uses: softprops/action-gh-release@v2
         with:
-          name: windows
-          path: |
-            app/dist/Glitch-Visualizer-Setup.exe
-            app/dist/Glitch-Visualizer.exe
-      - if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
+          tag_name: ${{ needs.release.outputs.tag }}
           files: |
             app/dist/Glitch-Visualizer-Setup.exe
             app/dist/Glitch-Visualizer.exe
   mac:
     needs: release
-    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,13 +64,10 @@ jobs:
         working-directory: app/dist
         run: |
           APP="$(find . -maxdepth 2 -name '*.app' | head -1)"
+          echo "found: $APP"
           codesign --force --deep --sign - "$APP"
           ditto -c -k --keepParent "$APP" Glitch-Visualizer-Mac.zip
-      - uses: actions/upload-artifact@v4
+      - uses: softprops/action-gh-release@v2
         with:
-          name: mac
-          path: app/dist/Glitch-Visualizer-Mac.zip
-      - if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
+          tag_name: ${{ needs.release.outputs.tag }}
           files: app/dist/Glitch-Visualizer-Mac.zip
