@@ -88,7 +88,7 @@ npm run dist       # Windows: app/dist/Glitch-Visualizer-Setup.exe + Glitch-Visu
 npm run dist-mac   # Mac: app/dist/mac-universal/Glitch Visualizer.app
 ```
 
-Or let GitHub build them for you: **publish a Release** (or **Actions → Build apps → Run workflow**) and the Windows installer, the portable `.exe` and the Mac `.zip` are built and attached automatically. Free web link: **Settings → Pages → Source: GitHub Actions** — every push to `main` publishes `index.html`.
+Or let GitHub build them for you: **Actions → Build apps → Run workflow**, type a version like `v1.0.1`, and the Windows installer, the portable `.exe` and the Mac `.zip` are built and published as a Release automatically. (Fork this repo to make your own builds.) Free web link: **Settings → Pages → Source: GitHub Actions** — every push to `main` publishes `index.html`.
 
 Everything is one file: [`index.html`](index.html) (the visualizer + setup screen). The Windows app ([`app/`](app)) wraps the same page and adds per-app audio capture.
 
