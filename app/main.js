@@ -22,8 +22,11 @@ app.on('child-process-gone', (e, d) => log('child-process-gone', d));
 
 // ---- your setup (name, pictures, words) lives in theme.json in the app's settings folder ----
 const THEME_FILE = path.join(app.getPath('userData'), 'theme.json');
-ipcMain.handle('theme-load', () => { try { return JSON.parse(fs.readFileSync(THEME_FILE, 'utf8')); } catch (e) { return null; } });
-ipcMain.handle('theme-save', (e, t) => { try { fs.writeFileSync(THEME_FILE, JSON.stringify(t)); return true; } catch (err) { log('theme save failed', String(err)); return false; } });
+function readTheme() { try { return JSON.parse(fs.readFileSync(THEME_FILE, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') log('theme read failed', String(e)); return null; } }
+function writeTheme(t) { try { fs.mkdirSync(path.dirname(THEME_FILE), { recursive: true }); fs.writeFileSync(THEME_FILE, JSON.stringify(t)); log('theme saved', (t && t.name) || ''); return true; } catch (err) { log('theme save failed', String(err)); return false; } }
+log('theme file', THEME_FILE, fs.existsSync(THEME_FILE));
+ipcMain.handle('theme-load', () => readTheme());
+ipcMain.handle('theme-save', (e, t) => writeTheme(t));
 
 // ---- local link for OBS Browser Source: http://localhost:17777 (this PC only) ----
 const PORT = 17777;
@@ -32,8 +35,14 @@ const server = http.createServer((req, res) => {
   if (u === '/' || u === '/index.html') {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     res.end(fs.readFileSync(path.join(__dirname, 'index.html')));
+  } else if (u === '/theme-save' && req.method === 'POST') {
+    // fallback save path for the app window (also used if the preload bridge is unavailable)
+    let body = ''; req.on('data', c => { body += c; if (body.length > 64e6) req.destroy(); });
+    req.on('end', () => { let ok = false; try { ok = writeTheme(JSON.parse(body)); } catch (e) {} res.writeHead(ok ? 200 : 400, { 'Access-Control-Allow-Origin': '*' }); res.end(ok ? 'ok' : 'bad'); });
+  } else if (u === '/theme-save' && req.method === 'OPTIONS') {
+    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' }); res.end();
   } else if (u === '/theme.json') {
-    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
     try { res.end(fs.readFileSync(THEME_FILE)); } catch (e) { res.end('null'); }
   } else { res.writeHead(404); res.end(); }
 });
@@ -238,7 +247,7 @@ function createWindow() {
     log('page loaded');
     setTimeout(async () => {
       try {
-        const info = await wc.executeJavaScript('({w:innerWidth,h:innerHeight,frame:typeof frameNo!=="undefined"?frameNo:-1,mode:typeof mode!=="undefined"?mode:"?",appAudio:!!window.appAudio})');
+        const info = await wc.executeJavaScript('({w:innerWidth,h:innerHeight,frame:typeof frameNo!=="undefined"?frameNo:-1,mode:typeof mode!=="undefined"?mode:"?",appAudio:!!window.appAudio,appTheme:!!window.appTheme,dj:typeof DJ!=="undefined"?DJ:"?"})');
         log('page state', info);
         const img = await wc.capturePage();
         const sz = img.getSize(), bmp = img.toBitmap(); let lit = 0;
@@ -251,7 +260,11 @@ function createWindow() {
   win.webContents.on('before-input-event', (e, input) => {
     if (input.type === 'keyDown' && input.key === 'F11') { win.setFullScreen(!win.isFullScreen()); e.preventDefault(); }
   });
-  win.webContents.on('did-finish-load', () => { poll(); lastDecks = ''; readDecks(); });
+  win.webContents.on('did-finish-load', () => {
+    poll(); lastDecks = ''; readDecks();
+    const t = readTheme();
+    wc.executeJavaScript('window.__injectTheme&&window.__injectTheme(' + JSON.stringify(t) + ')').then(r => log('theme injected', r)).catch(e => log('theme inject failed', String(e)));
+  });
   if (IS_WIN) win.on('minimize', e => { e.preventDefault(); win.restore(); }); // stay capturable by OBS
   win.on('closed', () => { stopAll(); win = null; });
 }

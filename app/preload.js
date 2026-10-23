@@ -7,8 +7,10 @@ if (process.platform === 'win32') contextBridge.exposeInMainWorld('appAudio', {
   onStatus: cb => ipcRenderer.on('apps', (_e, list) => cb(list)),
   onDecks: cb => ipcRenderer.on('decks', (_e, d) => cb(d))
 });
-contextBridge.exposeInMainWorld('appPlatform', process.platform);
-contextBridge.exposeInMainWorld('appTheme', {
-  load: () => ipcRenderer.invoke('theme-load'),
-  save: t => ipcRenderer.invoke('theme-save', t)
-});
+try {
+  contextBridge.exposeInMainWorld('appTheme', {
+    load: () => ipcRenderer.invoke('theme-load'),
+    save: t => ipcRenderer.invoke('theme-save', t)
+  });
+} catch (e) {}
+try { contextBridge.exposeInMainWorld('appPlatform', String(process.platform)); } catch (e) {}

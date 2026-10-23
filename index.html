@@ -1212,7 +1212,10 @@ const STORE={
     if(window.appTheme)return await window.appTheme.load();
     if(WSMODE){try{const r=await fetch('/theme.json',{cache:'no-store'});if(r.ok)return await r.json();}catch(e){}return null;}
     return await idb('get');},
-  async save(t){if(window.appTheme)return window.appTheme.save(t);if(!WSMODE)return idb('put',t);}
+  async save(t){
+    if(window.appTheme){try{if(await window.appTheme.save(t))return true;}catch(e){}}
+    if(APPMODE){try{const r=await fetch('http://localhost:17777/theme-save',{method:'POST',body:JSON.stringify(t)});if(r.ok)return true;}catch(e){}}
+    if(!WSMODE)return idb('put',t);}
 };
 function idb(op,val){return new Promise(res=>{try{const rq=indexedDB.open('glitchviz',1);rq.onupgradeneeded=()=>rq.result.createObjectStore('kv');
   rq.onsuccess=()=>{const tx=rq.result.transaction('kv',op==='get'?'readonly':'readwrite'),st=tx.objectStore('kv');
@@ -1414,7 +1417,11 @@ function frameBody(now){
   if(!ui.classList.contains('collapsed')&&!document.body.classList.contains('noui')){meterEl.style.width=Math.min(100,level*160)+'%';meterEl.style.background=level>0.55?'#ff3355':'#39ff14';}
 }
 applyTheme();
-(async()=>{const t=await STORE.load().catch(()=>null);
+// the desktop app hands over the saved theme directly once the page has loaded
+let THEME_INJECTED=false;
+window.__injectTheme=t=>{if(!(t&&t.v))return 'none';THEME_INJECTED=true;THEME=Object.assign({v:1,name:'',texts:null,images:[],logo:null,group:''},t);applyTheme();
+  const su=document.getElementById('su');if(THEME.name&&su&&su.style.display!=='none'){su.style.display='none';showPlayMusic();}return 'ok '+THEME.name;};
+(async()=>{let t=await STORE.load().catch(()=>null);if(!(t&&t.v)&&APPMODE){try{t=await (await fetch('http://localhost:17777/theme.json',{cache:'no-store'})).json();}catch(e){}}if(THEME_INJECTED)return;
   if(t&&t.v){THEME=Object.assign({v:1,name:'',texts:null,images:[],logo:null,group:''},t);applyTheme();}
   const noSetup=P.get('setup')==='0'||P.get('hideui')==='1'||WSMODE;
   if(!noSetup&&!(t&&t.v&&t.name))openSetup();
