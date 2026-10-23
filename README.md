@@ -22,7 +22,7 @@ Go to **[Releases](../../releases/latest)** and download the one for your comput
 | **Windows** (easiest) | `Glitch-Visualizer-Setup.exe` | Double-click → it installs and opens. Shortcuts land on your desktop and Start menu. |
 | Windows, no install | `Glitch-Visualizer.exe` | Double-click to run. Good for a USB stick. |
 | **Mac** (Apple Silicon & Intel) | `Glitch-Visualizer-Mac.zip` | Unzip → drag **Glitch Visualizer** into **Applications** → **right-click it → Open → Open** (first time only). |
-| Anything else / phone | `index.html` (or the web link on this page) | Open it in a browser. |
+| Anything else / phone | **[Open the web version](https://ygmackilla.github.io/glitch-visualizer/)** | Runs in your browser, nothing to install. |
 
 > **Windows says "Windows protected your PC"?** The app isn't code-signed (that costs money). Click **More info → Run anyway**.
 > **Mac says it "can't be opened"?** Open **System Settings → Privacy & Security**, scroll down, click **Open Anyway**. If it says the app is *damaged*, open Terminal and run `xattr -cr "/Applications/Glitch Visualizer.app"`.
