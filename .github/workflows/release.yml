@@ -1,16 +1,29 @@
 # Builds the apps and attaches them to a GitHub Release:
 #   Windows: Glitch-Visualizer-Setup.exe (installer) + Glitch-Visualizer.exe (portable, no install)
 #   Mac:     Glitch-Visualizer-Mac.zip (Apple Silicon + Intel)
-# Runs when you publish a release (Releases -> Draft a new release -> Publish), or by hand from the Actions tab.
+# Runs when a version tag is pushed (e.g. v1.0.1) or a release is published, or by hand from the Actions tab.
 name: Build apps
 on:
+  push:
+    tags: ['v*']
   release:
     types: [published]
   workflow_dispatch:
 permissions:
   contents: write
 jobs:
+  release:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Glitch Visualizer ${{ github.ref_name }}
+          body_path: .github/RELEASE_NOTES.md
   windows:
+    needs: release
+    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,13 +40,15 @@ jobs:
           path: |
             app/dist/Glitch-Visualizer-Setup.exe
             app/dist/Glitch-Visualizer.exe
-      - if: github.event_name == 'release'
+      - if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
             app/dist/Glitch-Visualizer-Setup.exe
             app/dist/Glitch-Visualizer.exe
   mac:
+    needs: release
+    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +69,7 @@ jobs:
         with:
           name: mac
           path: app/dist/Glitch-Visualizer-Mac.zip
-      - if: github.event_name == 'release'
+      - if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: app/dist/Glitch-Visualizer-Mac.zip
