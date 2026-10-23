@@ -9,8 +9,8 @@
   "scripts": {
     "copy-page": "node -e \"require('fs').copyFileSync('../index.html','index.html')\"",
     "start": "npm run copy-page && electron .",
-    "dist": "npm run copy-page && electron-builder --win --x64",
-    "dist-mac": "npm run copy-page && electron-builder --mac"
+    "dist": "npm run copy-page && electron-builder --win --x64 --publish never",
+    "dist-mac": "npm run copy-page && electron-builder --mac --publish never"
   },
   "build": {
     "appId": "io.github.glitchvisualizer",

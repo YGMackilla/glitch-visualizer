@@ -9,7 +9,7 @@ on:
       version:
         description: 'Version tag to publish (e.g. v1.0.1)'
         required: true
-        default: 'v1.0.0'
+        default: 'v1.0.1'
   push:
     tags: ['v*']
 permissions:
@@ -29,7 +29,7 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: Glitch Visualizer ${{ steps.t.outputs.tag }}
           body_path: .github/RELEASE_NOTES.md
-          make_latest: true
+          draft: true
   windows:
     needs: release
     runs-on: windows-latest
@@ -45,6 +45,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release.outputs.tag }}
+          draft: true
           files: |
             app/dist/Glitch-Visualizer-Setup.exe
             app/dist/Glitch-Visualizer.exe
@@ -70,4 +71,14 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release.outputs.tag }}
+          draft: true
           files: app/dist/Glitch-Visualizer-Mac.zip
+  publish:
+    needs: [release, windows, mac]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release.outputs.tag }}
+          draft: false
+          make_latest: true

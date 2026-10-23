@@ -1175,6 +1175,19 @@ if(AUTOMODE){
   hint.innerHTML='🎧 Open Spotify or any music app and play a song!<small>then tap the screen to the beat — the visuals lock to your music</small>';document.body.appendChild(hint);
   const tag=document.createElement('div');tag.id='bpmTag';document.body.appendChild(tag);
   let hideT=setTimeout(()=>hint.style.opacity=0,9000);
+  // On a real web page (not an embedded share link) phones can also listen through the mic
+  if(!EMBED&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+    const mb=document.createElement('button');mb.id='micbtn';mb.textContent='🎤 Listen with my mic';
+    mb.style.cssText='position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:17;background:#111;color:#39ff14;border:2px solid #39ff14;border-radius:12px;font:bold 15px monospace;padding:10px 16px;transition:opacity 1s';
+    document.body.appendChild(mb);
+    mb.onclick=async e=>{e.stopPropagation();firstTouch();
+      try{ensureCtx();disconnect();
+        stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:true}});
+        srcNode=actx.createMediaStreamSource(stream);srcNode.connect(gainNode);if(gainNode.gain.value<2.5){GAIN=2.5;gainNode.gain.value=GAIN;gainEl.value=GAIN;gainVal.textContent='2.5';}
+        mode='live';status('🎤 listening through the mic');mb.textContent='🎤 listening ✓';clearTimeout(hideT);hint.style.opacity=0;setTimeout(()=>mb.style.opacity=0,2500);setTimeout(()=>mb.remove(),3600);
+      }catch(err){mb.textContent='🎤 mic blocked — tap the beat instead';setTimeout(()=>mb.remove(),4000);}};
+    setTimeout(()=>{if(document.getElementById('micbtn')&&mode!=='live'){mb.style.opacity=0;setTimeout(()=>mb.remove(),1000);}},20000);
+  }
   mode='demo';status('auto mode — tap to the beat');
   let wl=null;const wake=async()=>{try{wl=await navigator.wakeLock.request('screen');}catch(e){}};
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')wake();});
