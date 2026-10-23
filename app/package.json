@@ -1,0 +1,91 @@
+{
+  "name": "glitch-visualizer",
+  "productName": "Glitch Visualizer",
+  "version": "1.0.0",
+  "description": "Glitch-malware audio visualizer for DJ streams. Your name, your pictures, your words. Originally made by DJMackilla.",
+  "main": "main.js",
+  "author": "DJMackilla",
+  "license": "MIT",
+  "scripts": {
+    "copy-page": "node -e \"require('fs').copyFileSync('../index.html','index.html')\"",
+    "start": "npm run copy-page && electron .",
+    "dist": "npm run copy-page && electron-builder --win --x64",
+    "dist-mac": "npm run copy-page && electron-builder --mac"
+  },
+  "build": {
+    "appId": "io.github.glitchvisualizer",
+    "productName": "Glitch Visualizer",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "node_modules/application-loopback/**/*",
+      "node_modules/ws/**/*"
+    ],
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "Glitch-Visualizer.exe"
+    },
+    "asarUnpack": [
+      "node_modules/application-loopback/bin/**"
+    ],
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Glitch Visualizer",
+      "artifactName": "Glitch-Visualizer-Setup.exe",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "directories": {
+      "buildResources": "build"
+    },
+    "mac": {
+      "icon": "build/icon.png",
+      "category": "public.app-category.music",
+      "identity": null,
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Lets the visualizer react to music from a microphone or DJ controller.",
+        "NSScreenCaptureUsageDescription": "Lets the visualizer hear the music playing on your Mac (system audio)."
+      }
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.8.0",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "application-loopback": "^1.2.7",
+    "ws": "^8.22.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YGMackilla/glitch-visualizer.git"
+  }
+}

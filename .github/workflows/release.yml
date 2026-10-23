@@ -1,0 +1,60 @@
+# Builds the apps and attaches them to a GitHub Release:
+#   Windows: Glitch-Visualizer-Setup.exe (installer) + Glitch-Visualizer.exe (portable, no install)
+#   Mac:     Glitch-Visualizer-Mac.zip (Apple Silicon + Intel)
+# Runs when you publish a release (Releases -> Draft a new release -> Publish), or by hand from the Actions tab.
+name: Build apps
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install
+        working-directory: app
+      - run: npm run dist
+        working-directory: app
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: false }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            app/dist/Glitch-Visualizer-Setup.exe
+            app/dist/Glitch-Visualizer.exe
+      - if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app/dist/Glitch-Visualizer-Setup.exe
+            app/dist/Glitch-Visualizer.exe
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install
+        working-directory: app
+      - run: npm run dist-mac
+        working-directory: app
+        env: { CSC_IDENTITY_AUTO_DISCOVERY: false }
+      - name: Sign (ad-hoc) and zip
+        working-directory: app/dist
+        run: |
+          APP="$(find . -maxdepth 2 -name '*.app' | head -1)"
+          codesign --force --deep --sign - "$APP"
+          ditto -c -k --keepParent "$APP" Glitch-Visualizer-Mac.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: app/dist/Glitch-Visualizer-Mac.zip
+      - if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/dist/Glitch-Visualizer-Mac.zip

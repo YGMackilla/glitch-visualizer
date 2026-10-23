@@ -1,0 +1,49 @@
+# Renders the README screenshots (docs/*.jpg) from index.html with placeholder art, and commits them.
+name: Screenshots
+on:
+  push:
+    branches: [main]
+    paths: [index.html, .github/workflows/screenshots.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install playwright pillow && python -m playwright install --with-deps chromium
+      - name: Render
+        run: |
+          mkdir -p docs
+          cat > shot.py <<'PY'
+          import asyncio, http.server, threading, functools
+          from playwright.async_api import async_playwright
+          from PIL import Image
+          srv = http.server.ThreadingHTTPServer(('127.0.0.1', 8601), functools.partial(http.server.SimpleHTTPRequestHandler, directory='.'))
+          threading.Thread(target=srv.serve_forever, daemon=True).start()
+          async def main():
+              async with async_playwright() as p:
+                  b = await p.chromium.launch(); pg = await b.new_page(viewport={'width': 1280, 'height': 720})
+                  await pg.goto('http://127.0.0.1:8601/index.html'); await pg.wait_for_timeout(1500)
+                  await pg.fill('#suName', 'DJ Nova'); await pg.click('#suEx'); await pg.wait_for_timeout(300)
+                  await pg.screenshot(path='docs/setup-screen.png')
+                  await pg.click('#suGo'); await pg.wait_for_timeout(500)
+                  await pg.evaluate("document.body.classList.add('noui');const m=document.getElementById('playmsg');if(m)m.remove()")
+                  await pg.keyboard.press('1'); await pg.wait_for_timeout(9000); await pg.screenshot(path='docs/desktop.png')
+                  await pg.keyboard.press('2'); await pg.wait_for_timeout(3000); await pg.screenshot(path='docs/wall.png')
+                  await pg.keyboard.press('m'); await pg.wait_for_timeout(700); await pg.screenshot(path='docs/takeover.png')
+                  await b.close()
+              for f in ['setup-screen', 'desktop', 'wall', 'takeover']:
+                  Image.open(f'docs/{f}.png').convert('RGB').save(f'docs/{f}.jpg', quality=78, optimize=True)
+          asyncio.run(main())
+          PY
+          python shot.py && rm docs/*.png shot.py
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs
+          git diff --cached --quiet || (git commit -m "Update screenshots" && git push)
